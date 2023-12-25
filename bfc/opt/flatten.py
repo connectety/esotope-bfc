@@ -6,6 +6,7 @@ from bfc.cond import *
 
 from bfc.opt.base import BaseOptimizerPass, Transformer
 
+
 class OptimizerPass(BaseOptimizerPass):
     def _transform(self, node):
         result = []
@@ -26,7 +27,7 @@ class OptimizerPass(BaseOptimizerPass):
             else:
                 # flush memory changes, but not pointer change.
                 # pointer change is propagated and eliminated as much as possible.
-                for k, v in changes.items():
+                for k, v in list(changes.items()):
                     if changesabs.get(k):
                         result.append(SetMemory(k, v))
                     elif v != 0:
@@ -37,7 +38,7 @@ class OptimizerPass(BaseOptimizerPass):
                 cur.movepointer(offset)
                 result.append(cur)
 
-        for k, v in changes.items():
+        for k, v in list(changes.items()):
             if changesabs.get(k):
                 result.append(SetMemory(k, v))
             elif v != 0:
@@ -50,4 +51,3 @@ class OptimizerPass(BaseOptimizerPass):
 
     def transform(self, node):
         return self.visit(node, self._transform)
-

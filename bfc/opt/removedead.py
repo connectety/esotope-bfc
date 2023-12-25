@@ -7,11 +7,12 @@ from bfc.cond import *
 from bfc.opt.base import BaseOptimizerPass, Transformer
 from bfc.opt.cleanup import cleanup
 
+
 class OptimizerPass(BaseOptimizerPass):
     # dead code elimination, sorta. doesn't do so across basic blocks yet.
 
     def _transform(self, node):
-        unusedcells = {} # cell -> node which last updated this cell
+        unusedcells = {}  # cell -> node which last updated this cell
         unusednodes = set()
         unusedmoves = []
 
@@ -26,7 +27,7 @@ class OptimizerPass(BaseOptimizerPass):
                 offsets += ioffsets
 
             pure = cur.pure() and cur.returns()
-            if pure: # to remove non-I/O nodes independent to memory cells
+            if pure:  # to remove non-I/O nodes independent to memory cells
                 unusedmoves.append(i)
 
             irefs = cur.postreferences().unsure
@@ -44,8 +45,10 @@ class OptimizerPass(BaseOptimizerPass):
             else:
                 for j in irefs:
                     j += offsets
-                    try: unusednodes.discard(unusedcells.pop(j))
-                    except: pass
+                    try:
+                        unusednodes.discard(unusedcells.pop(j))
+                    except:
+                        pass
 
             # now removes all nodes which cell updates have been never
             # referenced, and is to be (certainly) updated by this node.
@@ -54,7 +57,7 @@ class OptimizerPass(BaseOptimizerPass):
                 j += offsets
                 try:
                     oldi = unusedcells[j]
-                    unusednodes.remove(oldi) # will raise exception if none
+                    unusednodes.remove(oldi)  # will raise exception if none
                     node[oldi] = Nop()
                 except:
                     pass
@@ -73,4 +76,3 @@ class OptimizerPass(BaseOptimizerPass):
 
     def transform(self, node):
         return self.visit(node, self._transform)
-

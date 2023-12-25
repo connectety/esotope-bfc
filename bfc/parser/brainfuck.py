@@ -6,6 +6,7 @@ from bfc.cond import *
 
 from bfc.parser.base import BaseParser
 
+
 class Parser(BaseParser):
     """The basic Brainfuck parser.
 
@@ -57,7 +58,7 @@ class Parser(BaseParser):
                         nodestack.append(While(MemNotEqual(0, 0)))
                     elif ch == ']':
                         if len(nodestack) < 2:
-                            raise ValueError('Not matching ] at line %d' % (lineno+1))
+                            raise ValueError('Not matching ] at line %d' % (lineno + 1))
                         loop = nodestack.pop()
                         nodestack[-1].append(loop)
                     else:
@@ -79,4 +80,3 @@ class Parser(BaseParser):
 
     def unknown(self, ch, nodestack):
         pass
-

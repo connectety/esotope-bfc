@@ -7,6 +7,7 @@ from bfc.cond import *
 from bfc.opt.base import BaseOptimizerPass, Transformer
 from bfc.opt.cleanup import cleanup
 
+
 class OptimizerPass(BaseOptimizerPass):
     # propagates cell references and constants as much as possible.
     # requires minptrloops pass for optimal processing. otherwise MovePointer
@@ -15,7 +16,7 @@ class OptimizerPass(BaseOptimizerPass):
     def _transform(self, node):
         backrefs = {}
         usedrefs = {}
-        substs = {} # only for simple one, unless some vars are not current
+        substs = {}  # only for simple one, unless some vars are not current
 
         tr = Transformer(node)
         for i, cur in tr:
@@ -41,16 +42,20 @@ class OptimizerPass(BaseOptimizerPass):
                         else:
                             del substs[offset]
                 else:
-                    try: del substs[offset]
-                    except: pass
+                    try:
+                        del substs[offset]
+                    except:
+                        pass
             elif isinstance(cur, Input):
                 alters = True
                 offset = cur.offset
-                try: del substs[offset]
-                except: pass
+                try:
+                    del substs[offset]
+                except:
+                    pass
             elif isinstance(cur, Output):
                 pass
-            else: # MovePointer, While etc.
+            else:  # MovePointer, While etc.
                 backrefs.clear()
                 usedrefs.clear()
                 substs.clear()
@@ -64,8 +69,10 @@ class OptimizerPass(BaseOptimizerPass):
             if alters:
                 if not mergable:
                     # prohibit next merging attempt.
-                    try: del backrefs[offset]
-                    except: pass
+                    try:
+                        del backrefs[offset]
+                    except:
+                        pass
                 else:
                     # we can merge node[target] and node[i] if:
                     # - no operation has changed cell k between them. (thus such target
@@ -95,4 +102,3 @@ class OptimizerPass(BaseOptimizerPass):
 
     def transform(self, node):
         return self.visit(node, self._transform)
-

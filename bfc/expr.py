@@ -2,6 +2,8 @@
 
 import operator as _operator
 from bfc.utils import *
+from functools import reduce
+
 
 class _ExprMeta(gentype):
     """Metaclass of Expr. Used to implement Expr[] syntax."""
@@ -14,20 +16,19 @@ class _ExprMeta(gentype):
 
         return ReferenceExpr(offset)
 
-class Expr(genobject):
+
+class Expr(genobject, metaclass=_ExprMeta):
     """Expression class with canonicalization.
 
     Expression is extensively used in the Brainfuck IL, as it is a lot readable
     in the output than a set of operations, and easier to implement certain
     operations. Expression is immutable, and always canonicalized."""
 
-    __metaclass__ = _ExprMeta
-
-    def __gen__(cls, obj=0):
+    def gen(cls, obj=0):
         if isinstance(obj, Expr): return obj
         return LinearExpr(int(obj))
 
-    def __nonzero__(self):
+    def __bool__(self):
         """expr.__nonzero__() -> bool
 
         Expression is non-zero if and only if the internal representation is
@@ -37,21 +38,34 @@ class Expr(genobject):
         return True
 
     def __pos__(self): return self
+
     def __neg__(self): return LinearExpr((-1, self))
 
     def __add__(lhs, rhs): return LinearExpr(lhs, rhs)
+
     def __radd__(rhs, lhs): return LinearExpr(lhs, rhs)
+
     def __sub__(lhs, rhs): return LinearExpr(lhs, (-1, rhs))
+
     def __rsub__(rhs, lhs): return LinearExpr(lhs, (-1, rhs))
+
     def __mul__(lhs, rhs): return MultiplyExpr(lhs, rhs)
+
     def __rmul__(rhs, lhs): return MultiplyExpr(lhs, rhs)
+
     def __truediv__(lhs, rhs): return ExactDivisionExpr(lhs, rhs)
+
     def __rtruediv__(rhs, lhs): return ExactDivisionExpr(lhs, rhs)
+
     __div__ = __truediv__
     __rdiv__ = __rtruediv__
+
     def __floordiv__(lhs, rhs): return DivisionExpr(lhs, rhs)
+
     def __rfloordiv__(rhs, lhs): return DivisionExpr(lhs, rhs)
+
     def __mod__(lhs, rhs): return ModuloExpr(lhs, rhs)
+
     def __rmod__(rhs, lhs): return ModuloExpr(lhs, rhs)
 
     def simple(self):
@@ -69,14 +83,14 @@ class Expr(genobject):
         """Returns the set of memory cells (possibly other Expr or variable
         symbols) the current expression references."""
 
-        raise NotImplementedError # pragma: no cover
+        raise NotImplementedError  # pragma: no cover
 
     def movepointer(self, offset):
         """Returns new expression with all memory reference is shifted by given
         offset. For example, {3} shifted by 4 is {7} and {{5}+6} shifted by -1
         is {{4}+5}."""
 
-        raise NotImplementedError # pragma: no cover
+        raise NotImplementedError  # pragma: no cover
 
     def withmemory(self, map):
         """Returns new expression with all memory reference present in the
@@ -84,7 +98,7 @@ class Expr(genobject):
         offset to its current value. The result is automatically
         canonicalized."""
 
-        raise NotImplementedError # pragma: no cover
+        raise NotImplementedError  # pragma: no cover
 
     def compactrepr(self, prec=0):
         """Returns a compact string notation of this expression. The additional
@@ -92,15 +106,16 @@ class Expr(genobject):
         parenthesizing. (Hint: with sufficient large prec value almost all
         expression will be parenthesized.)"""
 
-        raise NotImplementedError # pragma: no cover
+        raise NotImplementedError  # pragma: no cover
 
     def __repr__(self):
         return '<Expr: %s>' % self.compactrepr()
 
+
 class _ExprNode(Expr):
     """Base class for every expression node."""
 
-    __gen__ = genobject.__gen__
+    gen = genobject.gen
 
     def __hash__(self):
         return hash(tuple.__add__((self.__class__,), self.args))
@@ -112,6 +127,7 @@ class _ExprNode(Expr):
     def __ne__(lhs, rhs):
         rhs = Expr(rhs)
         return type(lhs) != type(rhs) or lhs.args != rhs.args
+
 
 class ReferenceExpr(_ExprNode):
     """Memory reference node (notation: {expr}).
@@ -158,6 +174,7 @@ class ReferenceExpr(_ExprNode):
     def compactrepr(self, prec=0):
         return '{%s}' % self.offset.compactrepr()
 
+
 class LinearExpr(_ExprNode, tuple):
     """Linear combination node (notation: expr+expr, expr-expr, k*expr,
     -expr, +expr and Expr(number)).
@@ -168,7 +185,7 @@ class LinearExpr(_ExprNode, tuple):
     it should be an integer constant.
     """
 
-    def __gen__(cls, *terms):
+    def gen(cls, *terms):
         # normalize terms as (const, (coeff1, term1), (coeff2, term2), ...)
         const = 0
         termsmap = {}
@@ -182,23 +199,23 @@ class LinearExpr(_ExprNode, tuple):
                     coeff, term = term
                     coeff = int(coeff)
 
-                if isinstance(term, LinearExpr): # flatten
+                if isinstance(term, LinearExpr):  # flatten
                     const += coeff * term[0]
                     for icoeff, iterm in term[1:]:
                         termsmap[iterm] = termsmap.get(iterm, 0) + coeff * icoeff
-                elif isinstance(term, (int, long)):
+                elif isinstance(term, int):
                     const += coeff * term
                 else:
                     termsmap[term] = termsmap.get(term, 0) + coeff
 
         args = [const]
-        for k, v in termsmap.items():
+        for k, v in list(termsmap.items()):
             if v != 0: args.append((v, k))
         if len(args) == 2 and args[0] == 0 and args[1][0] == 1:
-            return args[1][1] # special casing
+            return args[1][1]  # special casing
         return tuple.__new__(cls, args)
 
-    def __nonzero__(self):
+    def __bool__(self):
         return len(self) != 1 or self[0] != 0
 
     def __hash__(self):
@@ -212,7 +229,7 @@ class LinearExpr(_ExprNode, tuple):
         return tuple(self)
 
     def simple(self):
-        return (len(self) == 1)
+        return len(self) == 1
 
     def __int__(self):
         assert len(self) == 1
@@ -245,9 +262,12 @@ class LinearExpr(_ExprNode, tuple):
     def compactrepr(self, prec=0):
         result = []
         for v, k in self[1:]:
-            if v == -1: result.append('-%s' % k.compactrepr(1))
-            elif v == 1: result.append('+%s' % k.compactrepr(1))
-            else: result.append('%+d*%s' % (v, k.compactrepr(1)))
+            if v == -1:
+                result.append('-%s' % k.compactrepr(1))
+            elif v == 1:
+                result.append('+%s' % k.compactrepr(1))
+            else:
+                result.append('%+d*%s' % (v, k.compactrepr(1)))
         if self[0] != 0:
             result.append('%+d' % self[0])
 
@@ -259,6 +279,7 @@ class LinearExpr(_ExprNode, tuple):
             terms = '(%s)' % terms
         return terms
 
+
 class MultiplyExpr(_ExprNode, tuple):
     """Multiplication node (notation: expr*expr).
 
@@ -266,7 +287,7 @@ class MultiplyExpr(_ExprNode, tuple):
     a constant factor it is represented as LinearExpr.
     """
 
-    def __gen__(cls, *terms):
+    def gen(cls, *terms):
         # filter integral terms here.
         factor = 1
         realterms = []
@@ -281,15 +302,15 @@ class MultiplyExpr(_ExprNode, tuple):
                     realterms.extend(term)
                 else:
                     realterms.append(term)
-        realterms.sort(key=hash) # XXX
+        realterms.sort(key=hash)  # XXX
 
-        if not realterms: # e.g. MultiplyExpr(4, 5)
+        if not realterms:  # e.g. MultiplyExpr(4, 5)
             return LinearExpr(factor)
-        elif factor == 0: # e.g. MultiplyExpr(0, Expr[3])
+        elif factor == 0:  # e.g. MultiplyExpr(0, Expr[3])
             return LinearExpr()
-        elif factor != 1: # e.g. MultiplyExpr(2, Expr[3])
+        elif factor != 1:  # e.g. MultiplyExpr(2, Expr[3])
             return LinearExpr((factor, MultiplyExpr(*realterms)))
-        elif len(realterms) == 1: # e.g. MultiplyExpr(Expr[3])
+        elif len(realterms) == 1:  # e.g. MultiplyExpr(Expr[3])
             return realterms[0]
         else:
             return tuple.__new__(cls, realterms)
@@ -326,6 +347,7 @@ class MultiplyExpr(_ExprNode, tuple):
         if prec > 2 and len(self) > 1: terms = '(%s)' % terms
         return terms
 
+
 class DivisionExpr(_ExprNode):
     """Floor division node (notation: expr//expr).
 
@@ -336,11 +358,14 @@ class DivisionExpr(_ExprNode):
 
     __slots__ = ('lhs', 'rhs')
 
-    def __gen__(cls, lhs, rhs):
-        try: rvalue = int(rhs)
-        except: pass
+    def gen(cls, lhs, rhs):
+        try:
+            rvalue = int(rhs)
+        except:
+            pass
         else:
-            try: lvalue = int(lhs)
+            try:
+                lvalue = int(lhs)
             except:
                 if rvalue == 1: return lhs
                 if rvalue == -1: return -lhs
@@ -356,7 +381,7 @@ class DivisionExpr(_ExprNode):
 
     @property
     def args(self):
-        return (self.lhs, self.rhs)
+        return self.lhs, self.rhs
 
     def references(self):
         return self.lhs.references() | self.rhs.references()
@@ -372,6 +397,7 @@ class DivisionExpr(_ExprNode):
         if prec > 3: terms = '(%s)' % terms
         return terms
 
+
 class ExactDivisionExpr(_ExprNode):
     """Exact division node (notation: expr/expr).
 
@@ -383,11 +409,14 @@ class ExactDivisionExpr(_ExprNode):
 
     __slots__ = ('lhs', 'rhs')
 
-    def __gen__(cls, lhs, rhs):
-        try: rvalue = int(rhs)
-        except: pass
+    def gen(cls, lhs, rhs):
+        try:
+            rvalue = int(rhs)
+        except:
+            pass
         else:
-            try: lvalue = int(lhs)
+            try:
+                lvalue = int(lhs)
             except:
                 if rvalue == 1: return lhs
                 if rvalue == -1: return -lhs
@@ -439,6 +468,7 @@ class ExactDivisionExpr(_ExprNode):
         if prec > 3: terms = '(%s)' % terms
         return terms
 
+
 class ModuloExpr(_ExprNode):
     """Modulo node (notation: expr%expr).
 
@@ -450,7 +480,7 @@ class ModuloExpr(_ExprNode):
 
     __slots__ = ('lhs', 'rhs')
 
-    def __gen__(cls, lhs, rhs):
+    def gen(cls, lhs, rhs):
         try:
             rvalue = int(rhs)
             lvalue = int(lhs)
@@ -467,7 +497,7 @@ class ModuloExpr(_ExprNode):
 
     @property
     def args(self):
-        return (self.lhs, self.rhs)
+        return self.lhs, self.rhs
 
     def references(self):
         return self.lhs.references() | self.rhs.references()
@@ -482,4 +512,3 @@ class ModuloExpr(_ExprNode):
         terms = '%s%%%s' % (self.lhs.compactrepr(2), self.rhs.compactrepr(3))
         if prec > 3: terms = '(%s)' % terms
         return terms
-

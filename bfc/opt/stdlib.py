@@ -6,6 +6,7 @@ from bfc.cond import *
 
 from bfc.opt.base import BaseOptimizerPass, Transformer
 
+
 class OptimizerPass(BaseOptimizerPass):
     # converts common idioms to direct C library call.
     # - merges Output[] nodes into OutputConst[] node as much as possible.
@@ -20,7 +21,7 @@ class OptimizerPass(BaseOptimizerPass):
             elif isinstance(cur, OutputConst):
                 tr.replace()
                 laststr.append(cur.str)
-            elif not cur.pure(): # I/O cannot be reordered!
+            elif not cur.pure():  # I/O cannot be reordered!
                 if laststr:
                     tr.prepend(OutputConst(''.join(laststr)))
                 laststr = []
@@ -32,4 +33,3 @@ class OptimizerPass(BaseOptimizerPass):
 
     def transform(self, node):
         return self.visit(node, self._transform)
-

@@ -7,16 +7,25 @@ from bfc.cond import *
 from bfc.opt.base import BaseOptimizerPass, Transformer
 from bfc.opt.cleanup import cleanup
 
+
 def _gcdex(x, y):
-    a = 0; b = 1
-    c = 1; d = 0
+    a = 0
+    b = 1
+    c = 1
+    d = 0
     while x:
-        q = y / x; r = y % x
-        u = a - c * q; v = b - d * q
-        y = x; x = r
-        a = c; b = d
-        c = u; d = v
-    return (a, b, y)
+        q = y / x
+        r = y % x
+        u = a - c * q
+        v = b - d * q
+        y = x
+        x = r
+        a = c
+        b = d
+        c = u
+        d = v
+    return a, b, y
+
 
 class OptimizerPass(BaseOptimizerPass):
     # tries to convert various loops into more specific form:
@@ -44,9 +53,9 @@ class OptimizerPass(BaseOptimizerPass):
 
             if cur.offsets() != 0: continue
 
-            flag = True # whether Repeat[] is applicable
+            flag = True  # whether Repeat[] is applicable
             cell = Expr()
-            mode = 0 # 0:adjust, 1:set, -1:unknown
+            mode = 0  # 0:adjust, 1:set, -1:unknown
 
             for inode in cur:
                 if isinstance(inode, SetMemory):
@@ -70,7 +79,7 @@ class OptimizerPass(BaseOptimizerPass):
 
                 refs = inode.postreferences().unsure - inode.postupdates().sure
                 if None in refs or target in refs:
-                    flag = False # references target, cannot use Repeat[]
+                    flag = False  # references target, cannot use Repeat[]
 
             if mode < 0 or not cell.simple(): continue
             delta = (value - int(cell)) % overflow
@@ -82,7 +91,7 @@ class OptimizerPass(BaseOptimizerPass):
                     tr.replace(If(cur.cond, cur[:]), SetMemory(target, value))
                 else:
                     infloop = While(Always())
-                    if not cur.pure(): # e.g. +[.[-]+]
+                    if not cur.pure():  # e.g. +[.[-]+]
                         infloop.extend(cur)
                     tr.replace(infloop)
 
@@ -112,7 +121,7 @@ class OptimizerPass(BaseOptimizerPass):
                           if not (isinstance(inode, SetMemory) and inode.offset == target)]
 
                 result = []
-                if gcd > 1: 
+                if gcd > 1:
                     # no need to check if x is a multiple of gcd(m,w) (=1).
                     result.append(If(NotEqual(diff % gcd, 0), [While(Always())]))
                 if inodes:
@@ -125,4 +134,3 @@ class OptimizerPass(BaseOptimizerPass):
 
     def transform(self, node):
         return self.visit(node, self._transform)
-

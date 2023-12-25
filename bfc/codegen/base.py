@@ -2,6 +2,7 @@
 
 import bfc.nodes
 
+
 class BaseGenerator(object):
     def __init__(self, compiler):
         self.compiler = compiler
@@ -40,5 +41,3 @@ class BaseGenerator(object):
     def generate(self, node):
         self.debugging = self.compiler.debugging
         self.genmap[type(node)](node)
-
-

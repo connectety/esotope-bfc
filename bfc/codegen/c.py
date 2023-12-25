@@ -1,7 +1,7 @@
 # This is a part of Esotope Brainfuck Compiler.
 
 import sys
-import cStringIO as stringio
+import io as stringio
 
 from bfc.nodes import *
 from bfc.expr import *
@@ -9,12 +9,13 @@ from bfc.cond import *
 
 from bfc.codegen.base import BaseGenerator
 
+
 class Generator(BaseGenerator):
     def __init__(self, compiler):
         BaseGenerator.__init__(self, compiler)
         self.declbuf = stringio.StringIO()
         self.buf = stringio.StringIO()
-        self.nextvars = {} 
+        self.nextvars = {}
 
     def newvariable(self, prefix):
         index = self.nextvars.get(prefix, 0)
@@ -40,12 +41,12 @@ class Generator(BaseGenerator):
 
     def flush(self):
         sys.stdout.write(self.declbuf.getvalue())
-        self.declbuf.reset()
-        self.declbuf.truncate()
+        self.declbuf.truncate(0)
+        self.declbuf.seek(0)
 
         sys.stdout.write(self.buf.getvalue())
-        self.buf.reset()
-        self.buf.truncate()
+        self.buf.truncate(0)
+        self.buf.seek(0)
 
     ############################################################
 
@@ -57,15 +58,15 @@ class Generator(BaseGenerator):
             multiples = set()
             for min, max in cond.ranges:
                 if min is not None: multiples.add(min >> cellsize)
-                if max is not None: multiples.add((max-1) >> cellsize)
+                if max is not None: multiples.add((max - 1) >> cellsize)
             realranges = [Between(0, cond.expr, (1 << cellsize) - 1)]
             for n in multiples:
                 realranges.append(Range(cond.expr + (n << cellsize), *cond.ranges))
             return Conjunction(*realranges)
         elif isinstance(cond, Conjunction):
-            return Conjunction(*map(self.adoptcond, cond))
+            return Conjunction(*list(map(self.adoptcond, cond)))
         elif isinstance(cond, Disjunction):
-            return Disjunction(*map(self.adoptcond, cond))
+            return Disjunction(*list(map(self.adoptcond, cond)))
         else:
             return cond
 
@@ -78,9 +79,12 @@ class Generator(BaseGenerator):
         if isinstance(expr, LinearExpr):
             result = []
             for v, k in expr[1:]:
-                if v == -1: result.append('-%s' % _generateexpr(k, 1))
-                elif v == 1: result.append('+%s' % _generateexpr(k, 1))
-                else: result.append('%+d*%s' % (v, _generateexpr(k, 1)))
+                if v == -1:
+                    result.append('-%s' % _generateexpr(k, 1))
+                elif v == 1:
+                    result.append('+%s' % _generateexpr(k, 1))
+                else:
+                    result.append('%+d*%s' % (v, _generateexpr(k, 1)))
             if expr[0] != 0:
                 result.append('%+d' % expr[0])
 
@@ -157,7 +161,7 @@ class Generator(BaseGenerator):
     ############################################################
 
     def _formatadjust(self, ref, value):
-        if isinstance(value, (int, long)) or value.simple():
+        if isinstance(value, int) or value.simple():
             value = int(value)
             if value == 0:
                 return ''
@@ -173,9 +177,15 @@ class Generator(BaseGenerator):
         else:
             return posform
 
-    _reprmap = [('\\%03o', '%c')[32 <= i < 127] % i for i in xrange(256)]
-    _reprmap[0] = '\\0'; _reprmap[9] = '\\t'; _reprmap[10] = '\\n'; _reprmap[13] = '\\r'
-    _reprmap[34] = '\\"'; _reprmap[39] = '\''; _reprmap[92] = '\\\\'
+    _reprmap = [('\\%03o', '%c')[32 <= i < 127] % i for i in range(256)]
+    _reprmap[0] = '\\0'
+    _reprmap[9] = '\\t'
+    _reprmap[10] = '\\n'
+    _reprmap[13] = '\\r'
+    _reprmap[34] = '\\"'
+    _reprmap[39] = '\''
+    _reprmap[92] = '\\\\'
+
     def _addslashes(self, s, _reprmap=_reprmap):
         return ''.join(_reprmap[ord(i)] for i in s)
 
@@ -208,7 +218,7 @@ class Generator(BaseGenerator):
             self.declbuf.write('#define PUTS(s) fwrite(s, 1, sizeof(s)-1, stdout)\n')
 
     def generate_Nop(self, node):
-        pass # do nothing
+        pass  # do nothing
 
     def generate_SetMemory(self, node):
         fullstmt = 'p[%d] = %s;' % (node.offset, self.generateexpr(node.value))
@@ -237,7 +247,7 @@ class Generator(BaseGenerator):
 
     def generate_SeekMemory(self, node):
         self.write('while (p[%d] != %d) %s;' % (node.target, node.value,
-                self._formatadjust('p', node.stride)))
+                                                self._formatadjust('p', node.stride)))
 
     def generate_If(self, node):
         if self.debugging:
@@ -249,7 +259,7 @@ class Generator(BaseGenerator):
 
     def generate_Repeat(self, node):
         count = node.count
-        if count.simple() or not isinstance(count, ReferenceExpr): # TODO more generic code
+        if count.simple() or not isinstance(count, ReferenceExpr):  # TODO more generic code
             # the memory cell is already within the range, so no need to add modulo.
             count %= (1 << self.cellsize)
 
@@ -258,7 +268,7 @@ class Generator(BaseGenerator):
 
         var = self.newvariable('loopcnt')
         self.write('for (%s = %s; %s > 0; --%s) {' %
-                (var, self.generateexpr(count), var, var))
+                   (var, self.generateexpr(count), var, var))
         self._generatenested(node)
         self.write('}')
 
@@ -272,4 +282,3 @@ class Generator(BaseGenerator):
             self.write('while (%s) {' % self.generatecond(self.adoptcond(node.cond)))
             self._generatenested(node)
             self.write('}')
-

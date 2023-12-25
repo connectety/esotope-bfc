@@ -3,6 +3,7 @@
 from bfc.expr import *
 from bfc.tests.utils import *
 
+
 class TestExprOps:
     def test_init_number(self):
         assert Expr() == 0
@@ -35,25 +36,25 @@ class TestExprOps:
         assert (Expr(3) * Expr(4)).simple()
         assert (Expr(3) // Expr(4)).simple()
         assert (Expr(3) % Expr(4)).simple()
-        for u in xrange(-9, 10):
+        for u in range(-9, 10):
             assert Expr(u) == u
-            for v in xrange(-9, 10):
-                assert (Expr(u) + Expr(v)) == (u+v)
-                assert (Expr(u) + v) == (u+v)
-                assert (u + Expr(v)) == (u+v)
-                assert (Expr(u) - Expr(v)) == (u-v)
-                assert (Expr(u) - v) == (u-v)
-                assert (u - Expr(v)) == (u-v)
-                assert (Expr(u) * Expr(v)) == (u*v)
-                assert (Expr(u) * v) == (u*v)
-                assert (u * Expr(v)) == (u*v)
+            for v in range(-9, 10):
+                assert (Expr(u) + Expr(v)) == (u + v)
+                assert (Expr(u) + v) == (u + v)
+                assert (u + Expr(v)) == (u + v)
+                assert (Expr(u) - Expr(v)) == (u - v)
+                assert (Expr(u) - v) == (u - v)
+                assert (u - Expr(v)) == (u - v)
+                assert (Expr(u) * Expr(v)) == (u * v)
+                assert (Expr(u) * v) == (u * v)
+                assert (u * Expr(v)) == (u * v)
                 if u > 0 and v > 0:
-                    assert (Expr(u) // Expr(v)) == (u//v)
-                    assert (Expr(u) // v) == (u//v)
-                    assert (u // Expr(v)) == (u//v)
-                    assert (Expr(u) % Expr(v)) == (u%v)
-                    assert (Expr(u) % v) == (u%v)
-                    assert (u % Expr(v)) == (u%v)
+                    assert (Expr(u) // Expr(v)) == (u // v)
+                    assert (Expr(u) // v) == (u // v)
+                    assert (u // Expr(v)) == (u // v)
+                    assert (Expr(u) % Expr(v)) == (u % v)
+                    assert (Expr(u) % v) == (u % v)
+                    assert (u % Expr(v)) == (u % v)
             if u == 0:
                 assert not Expr(u)
             else:
@@ -78,7 +79,7 @@ class TestExprOps:
         assert Expr[4] * 4 == 4 * Expr[4]
         assert Expr[4] * Expr[3] == Expr[3] * Expr[4]
         assert (Expr[1] * Expr[2]) * (Expr[3] * Expr[4]) == \
-                Expr[1] * (Expr[2] * Expr[3]) * Expr[4]
+               Expr[1] * (Expr[2] * Expr[3]) * Expr[4]
         assert 4 * (Expr[5] * 5) == 20 * Expr[5]
         assert Expr[1] * Expr[2] * Expr[3] * Expr[4]
 
@@ -131,8 +132,8 @@ class TestExprOps:
     def test_references(self):
         assert Expr(42).references() == frozenset()
         assert Expr[42].references() == frozenset([42])
-        assert Expr[42+Expr[54]].references() == frozenset([54, 42+Expr[54]])
-        assert Expr[Expr[1]+Expr[2]].references() == frozenset([1, 2, Expr[1]+Expr[2]])
+        assert Expr[42 + Expr[54]].references() == frozenset([54, 42 + Expr[54]])
+        assert Expr[Expr[1] + Expr[2]].references() == frozenset([1, 2, Expr[1] + Expr[2]])
 
         assert (-Expr[1]).references() == frozenset([1])
         assert (Expr[1] + Expr[2]).references() == frozenset([1, 2])
@@ -145,8 +146,8 @@ class TestExprOps:
     def test_movepointer(self):
         assert Expr(42).movepointer(5) == Expr(42)
         assert Expr[42].movepointer(5) == Expr[47]
-        assert Expr[42+Expr[54]].movepointer(5) == Expr[47+Expr[59]]
-        assert Expr[Expr[1]+Expr[2]].movepointer(5) == Expr[5+Expr[6]+Expr[7]]
+        assert Expr[42 + Expr[54]].movepointer(5) == Expr[47 + Expr[59]]
+        assert Expr[Expr[1] + Expr[2]].movepointer(5) == Expr[5 + Expr[6] + Expr[7]]
 
         assert (-Expr[1]).movepointer(5) == -Expr[6]
         assert (Expr[1] + Expr[2]).movepointer(5) == Expr[6] + Expr[7]
@@ -157,35 +158,34 @@ class TestExprOps:
         assert (Expr[1] % Expr[2]).movepointer(5) == Expr[6] % Expr[7]
 
     def test_withmemory(self):
-        assert Expr(42).withmemory({1:2, 3:4}) == Expr(42)
-        assert Expr[42].withmemory({1:2, 3:4}) == Expr[42]
-        assert Expr[42].withmemory({42:54}) == 54
-        assert Expr[42].withmemory({42:Expr[54], 54:-1}) == -1 # transitive subst.
-        assert Expr[42].withmemory({42:Expr[42]-4}) == Expr[42] - 4 # recursive subst.
-        assert Expr[42+Expr[54]].withmemory({54:6}) == Expr[48]
-        assert Expr[42+Expr[54]].withmemory({54:6, 48:7}) == 7
-        assert Expr[Expr[1]+Expr[2]].withmemory({1:3, 2:-1}) == -1
+        assert Expr(42).withmemory({1: 2, 3: 4}) == Expr(42)
+        assert Expr[42].withmemory({1: 2, 3: 4}) == Expr[42]
+        assert Expr[42].withmemory({42: 54}) == 54
+        assert Expr[42].withmemory({42: Expr[54], 54: -1}) == -1  # transitive subst.
+        assert Expr[42].withmemory({42: Expr[42] - 4}) == Expr[42] - 4  # recursive subst.
+        assert Expr[42 + Expr[54]].withmemory({54: 6}) == Expr[48]
+        assert Expr[42 + Expr[54]].withmemory({54: 6, 48: 7}) == 7
+        assert Expr[Expr[1] + Expr[2]].withmemory({1: 3, 2: -1}) == -1
 
-        assert (-Expr[1]).withmemory({1:8}) == -8
-        assert (Expr[1] + Expr[2]).withmemory({1:8, 2:5}) == 13
-        assert (Expr[1] + Expr[2]).withmemory({1:0}) == Expr[2]
-        assert (Expr[1] + Expr[2]).withmemory({2:0}) == Expr[1]
-        assert (Expr[1] - Expr[2]).withmemory({1:8, 2:5}) == 3
-        assert (Expr[1] - Expr[2]).withmemory({1:0}) == -Expr[2]
-        assert (Expr[1] - Expr[2]).withmemory({2:0}) == Expr[1]
-        assert (Expr[1] * Expr[2]).withmemory({1:8, 2:5}) == 40
-        assert (Expr[1] * Expr[2]).withmemory({1:0}) == 0
-        assert (Expr[1] * Expr[2]).withmemory({1:1}) == Expr[2]
-        assert (Expr[1] * Expr[2]).withmemory({1:-1}) == -Expr[2]
-        assert (Expr[1] * Expr[2]).withmemory({2:0}) == 0
-        assert (Expr[1] * Expr[2]).withmemory({2:1}) == Expr[1]
-        assert (Expr[1] * Expr[2]).withmemory({2:-1}) == -Expr[1]
+        assert (-Expr[1]).withmemory({1: 8}) == -8
+        assert (Expr[1] + Expr[2]).withmemory({1: 8, 2: 5}) == 13
+        assert (Expr[1] + Expr[2]).withmemory({1: 0}) == Expr[2]
+        assert (Expr[1] + Expr[2]).withmemory({2: 0}) == Expr[1]
+        assert (Expr[1] - Expr[2]).withmemory({1: 8, 2: 5}) == 3
+        assert (Expr[1] - Expr[2]).withmemory({1: 0}) == -Expr[2]
+        assert (Expr[1] - Expr[2]).withmemory({2: 0}) == Expr[1]
+        assert (Expr[1] * Expr[2]).withmemory({1: 8, 2: 5}) == 40
+        assert (Expr[1] * Expr[2]).withmemory({1: 0}) == 0
+        assert (Expr[1] * Expr[2]).withmemory({1: 1}) == Expr[2]
+        assert (Expr[1] * Expr[2]).withmemory({1: -1}) == -Expr[2]
+        assert (Expr[1] * Expr[2]).withmemory({2: 0}) == 0
+        assert (Expr[1] * Expr[2]).withmemory({2: 1}) == Expr[1]
+        assert (Expr[1] * Expr[2]).withmemory({2: -1}) == -Expr[1]
         raises(ValueError, '''(Expr[1] / Expr[2]).withmemory({1:8, 2:5})''')
-        assert (Expr[1] / Expr[2]).withmemory({2:1}) == Expr[1]
-        assert (Expr[1] / Expr[2]).withmemory({2:-1}) == -Expr[1]
-        assert (Expr[1] / Expr[2]).withmemory({1:8, 2:4}) == 2
-        assert (Expr[1] // Expr[2]).withmemory({1:8, 2:5}) == 1
-        assert (Expr[1] // Expr[2]).withmemory({2:1}) == Expr[1]
-        assert (Expr[1] // Expr[2]).withmemory({2:-1}) == -Expr[1]
-        assert (Expr[1] % Expr[2]).withmemory({1:8, 2:5}) == 3
-
+        assert (Expr[1] / Expr[2]).withmemory({2: 1}) == Expr[1]
+        assert (Expr[1] / Expr[2]).withmemory({2: -1}) == -Expr[1]
+        assert (Expr[1] / Expr[2]).withmemory({1: 8, 2: 4}) == 2
+        assert (Expr[1] // Expr[2]).withmemory({1: 8, 2: 5}) == 1
+        assert (Expr[1] // Expr[2]).withmemory({2: 1}) == Expr[1]
+        assert (Expr[1] // Expr[2]).withmemory({2: -1}) == -Expr[1]
+        assert (Expr[1] % Expr[2]).withmemory({1: 8, 2: 5}) == 3

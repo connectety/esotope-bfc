@@ -10,6 +10,7 @@ objects.
 from bfc.expr import *
 from bfc.cond import *
 
+
 def _setmovepointer(cells, offset):
     """Adds given offset to every elements in cells, except for None (normally
     represents "one or more other cells")."""
@@ -17,6 +18,7 @@ def _setmovepointer(cells, offset):
     result = [i + offset for i in cells if i is not None]
     if None in cells: result.append(None)
     return set(result)
+
 
 class cellset(object):
     __slots__ = ('sure', 'unsure')
@@ -51,17 +53,17 @@ class cellset(object):
         self.unsure = self.sure.copy()
 
     def itersure(self):
-        return iter(self.sure - set([None]))
+        return iter(self.sure - {None})
 
     def iterunsure(self):
-        return iter(self.unsure - set([None]))
+        return iter(self.unsure - {None})
 
     def movepointer(self, offsets):
         if offsets == 0: return self.copy()
         return cellset(sure=_setmovepointer(self.sure, offsets),
                        unsure=_setmovepointer(self.unsure, offsets))
 
-    def __nonzero__(self):
+    def __bool__(self):
         return bool(self.sure) and bool(self.unsure)
 
     def __eq__(lhs, rhs):
@@ -74,6 +76,7 @@ class cellset(object):
         lhs.sure |= rhs.sure
         lhs.unsure |= rhs.unsure
         return lhs
+
     update = __ior__
 
     def __or__(lhs, rhs):
@@ -108,11 +111,11 @@ class cellset(object):
         return 'cellset(%s, %s)' % (self._repr_set(self.sure),
                                     self._repr_set(self.unsure - self.sure))
 
-
+
 class Node(object):
     """Base class of the Brainfuck IL."""
 
-    def __nonzero__(self):
+    def __bool__(self):
         """node.__nonzero__() -> bool
 
         Should return False if it is a unconditionally no-op."""
@@ -132,7 +135,7 @@ class Node(object):
     def args(self):
         """(Normalized) arguments passed to the object's constructor."""
 
-        raise NotImplementedError # pragma: no cover
+        raise NotImplementedError  # pragma: no cover
 
     def pure(self):
         """node.pure() -> bool
@@ -148,7 +151,7 @@ class Node(object):
         Moves all memory references in the node by given offset. This is an
         in-place operation."""
 
-        raise NotImplementedError # pragma: no cover
+        raise NotImplementedError  # pragma: no cover
 
     # propagates known memory cells given.
     def withmemory(self, map):
@@ -158,6 +161,7 @@ class Node(object):
     # this node, relative to initial pointer before execution.
     # these methods are used for forward analysis.
     def prereferences(self): return cellset()
+
     def preupdates(self): return cellset()
 
     # amount of pointer moves. it differs with amount of pointer moves
@@ -169,16 +173,18 @@ class Node(object):
     # after execution. these methods are used for backward analysis.
     # note that these will be same to pre* ones if offsets() returns 0.
     def postreferences(self): return cellset()
+
     def postupdates(self): return cellset()
 
     # returns False if this node is an infinite loop.
     def returns(self): return True
 
     def compactrepr(self):
-        raise NotImplementedError # pragma: no cover
+        raise NotImplementedError  # pragma: no cover
 
     def __repr__(self):
         return self.compactrepr()
+
 
 class ComplexNode(Node, list):
     def empty(self):
@@ -250,6 +256,7 @@ class ComplexNode(Node, list):
     def _innerrepr(self):
         return ', '.join(child.compactrepr() for child in self)
 
+
 class Program(ComplexNode):
     """Program node.
     
@@ -264,6 +271,7 @@ class Program(ComplexNode):
     def args(self):
         return list(self)
 
+
 class Nop(Node):
     """Nop node.
 
@@ -271,7 +279,7 @@ class Nop(Node):
     by cleanup pass.
     """
 
-    def __nonzero__(self):
+    def __bool__(self):
         return False
 
     def compactrepr(self):
@@ -281,12 +289,13 @@ class Nop(Node):
     def args(self):
         return ()
 
+
 class UseVariable(ComplexNode):
     def __init__(self, vars, children=[]):
         ComplexNode.__init__(self, children)
         self.vars = vars
 
-    def __nonzero__(self):
+    def __bool__(self):
         return len(self) > 0
 
     @property
@@ -302,6 +311,7 @@ class UseVariable(ComplexNode):
     def compactrepr(self):
         return 'UseVariable[%s; %s]' % (', '.join('$%s' % i for i in self.vars),
                                         self._innerrepr())
+
 
 class SetMemory(Node):
     """SetMemory node.
@@ -323,12 +333,12 @@ class SetMemory(Node):
             assert delta is None
             self.value = Expr(value)
 
-    def __nonzero__(self):
+    def __bool__(self):
         return self.value != Expr[self.offset]
 
     @property
     def args(self):
-        return (self.offset, self.value)
+        return self.offset, self.value
 
     def _get_delta(self):
         return self.value - Expr[self.offset]
@@ -347,10 +357,12 @@ class SetMemory(Node):
 
     def prereferences(self):
         return cellset(sure=self.value.references())
+
     postreferences = prereferences
 
     def preupdates(self):
         return cellset(sure=[self.offset])
+
     postupdates = preupdates
 
     def compactrepr(self):
@@ -368,6 +380,7 @@ class SetMemory(Node):
     def __repr__(self):
         return 'SetMemory[%d, %s]' % (self.offset, self.value.compactrepr())
 
+
 def AdjustMemory(offset, delta):
     """AdjustMemory[offset, delta] is a syntactic sugar for
     SetMemory[offset, {offset}+delta].
@@ -377,6 +390,7 @@ def AdjustMemory(offset, delta):
     """
 
     return SetMemory(offset, delta=delta)
+
 
 class MovePointer(Node):
     """MovePointer node.
@@ -389,7 +403,7 @@ class MovePointer(Node):
     def __init__(self, offset):
         self.offset = offset
 
-    def __nonzero__(self):
+    def __bool__(self):
         return self.offset != 0
 
     @property
@@ -397,13 +411,14 @@ class MovePointer(Node):
         return (self.offset,)
 
     def movepointer(self, offset):
-        pass # no change
+        pass  # no change
 
     def offsets(self):
         return self.offset
 
     def compactrepr(self):
         return 'MovePointer[%d]' % self.offset
+
 
 class Input(Node):
     """Input node.
@@ -429,10 +444,12 @@ class Input(Node):
 
     def preupdates(self):
         return cellset(sure=[self.offset])
+
     postupdates = preupdates
 
     def compactrepr(self):
         return '{%d}=Input[]' % self.offset
+
 
 class Output(Node):
     """Output node.
@@ -458,6 +475,7 @@ class Output(Node):
 
     def prereferences(self):
         return cellset(sure=self.expr.references())
+
     postreferences = prereferences
 
     def movepointer(self, offset):
@@ -465,6 +483,7 @@ class Output(Node):
 
     def compactrepr(self):
         return 'Output[%s]' % self.expr.compactrepr()
+
 
 class OutputConst(Node):
     """OutputConst node.
@@ -480,7 +499,7 @@ class OutputConst(Node):
         else:
             self.str = ''.join(chr(i & 0xff) for i in s)
 
-    def __nonzero__(self):
+    def __bool__(self):
         return len(self.str) > 0
 
     @property
@@ -491,10 +510,11 @@ class OutputConst(Node):
         return False
 
     def movepointer(self, offset):
-        pass # does nothing
+        pass  # does nothing
 
     def compactrepr(self):
         return 'OutputConst[%r]' % self.str
+
 
 class SeekMemory(Node):
     """SeekMemory node.
@@ -514,7 +534,7 @@ class SeekMemory(Node):
 
     @property
     def args(self):
-        return (self.target, self.stride, self.value)
+        return self.target, self.stride, self.value
 
     def offsets(self):
         return None
@@ -536,6 +556,7 @@ class SeekMemory(Node):
         else:
             return 'SeekMemory[{%d+%d*k}!=%d]' % (self.target, self.stride, self.value)
 
+
 class If(ComplexNode):
     """If node.
 
@@ -551,12 +572,12 @@ class If(ComplexNode):
         else:
             self.cond = cond
 
-    def __nonzero__(self):
+    def __bool__(self):
         return bool(self.cond) and len(self) > 0
 
     @property
     def args(self):
-        return (self.cond, list(self))
+        return self.cond, list(self)
 
     def movepointer(self, offset):
         ComplexNode.movepointer(self, offset)
@@ -581,7 +602,7 @@ class If(ComplexNode):
         if stride is not None:
             bodyrefs.updatesure(_setmovepointer(self.cond.references(), -stride))
         else:
-            bodyrefs.addsure(None) # we don't know where it is.
+            bodyrefs.addsure(None)  # we don't know where it is.
         return bodyrefs
 
     def preupdates(self):
@@ -592,6 +613,7 @@ class If(ComplexNode):
 
     def compactrepr(self):
         return 'If[%s; %s]' % (self.cond.compactrepr(), self._innerrepr())
+
 
 class Repeat(ComplexNode):
     """Repeat node.
@@ -604,12 +626,12 @@ class Repeat(ComplexNode):
         ComplexNode.__init__(self, children)
         self.count = Expr(count)
 
-    def __nonzero__(self):
+    def __bool__(self):
         return bool(self.count) and len(self) > 0
 
     @property
     def args(self):
-        return (self.count, list(self))
+        return self.count, list(self)
 
     def movepointer(self, offset):
         ComplexNode.movepointer(self, offset)
@@ -658,6 +680,7 @@ class Repeat(ComplexNode):
     def compactrepr(self):
         return 'Repeat[%s; %s]' % (self.count.compactrepr(), self._innerrepr())
 
+
 class While(ComplexNode):
     """While node.
 
@@ -670,13 +693,13 @@ class While(ComplexNode):
         ComplexNode.__init__(self, children)
         self.cond = cond
 
-    def __nonzero__(self):
+    def __bool__(self):
         # infinite loop should return True, even if there are no children.
         return bool(self.cond)
 
     @property
     def args(self):
-        return (self.cond, list(self))
+        return self.cond, list(self)
 
     def movepointer(self, offset):
         ComplexNode.movepointer(self, offset)
@@ -728,4 +751,3 @@ class While(ComplexNode):
 
     def compactrepr(self):
         return 'While[%s; %s]' % (self.cond.compactrepr(), self._innerrepr())
-

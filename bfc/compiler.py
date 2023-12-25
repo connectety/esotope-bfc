@@ -6,6 +6,7 @@ from bfc.cond import *
 
 from bfc import opt
 
+
 class Compiler(object):
     """Compiler class.
     
@@ -52,7 +53,7 @@ class Compiler(object):
         """
 
         for passcls in self.optpasses:
-            #self.generate(node); print
+            # self.generate(node); print
             passobj = passcls(self)
             # TODO passobj.check is not used yet.
             node = passobj.transform(node)
@@ -80,4 +81,3 @@ class Compiler(object):
         node = self.parse(fp)
         node = self.optimize(node)
         return self.generate(node)
-

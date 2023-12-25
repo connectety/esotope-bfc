@@ -3,15 +3,16 @@
 from bfc.expr import *
 from bfc.nodes import *
 
+
 class _IntegerSet(object):
     """An internal class for mapping arbitrary integer to object (or None).
     It also accepts finite & infinite slice (i.e. range) as a key."""
 
     def __init__(self):
-        self.modulomap = {} # modulo: list of {quotient: value} on all remainders
+        self.modulomap = {}  # modulo: list of {quotient: value} on all remainders
 
     def __setitem__(self, key, value):
-        if key is Ellipsis: # applies to every keys
+        if key is Ellipsis:  # applies to every keys
             self.clear()
             key = slice(None, None, None)
 
@@ -24,7 +25,8 @@ class _IntegerSet(object):
         try:
             return self.modulomap[1][0][key]
         except:
-            raise # XXX
+            raise  # XXX
+
 
 class MemoryState(object):
     """Describes the knowledge about current memory.
@@ -56,7 +58,7 @@ class MemoryState(object):
         #            memory[i] doesn't exist (i.e. "fully flattened out")
 
         if memory:
-            for k, v in dict(memory).items(): self.set(k, v)
+            for k, v in list(dict(memory).items()): self.set(k, v)
 
     def __replace(self, memory, backrefs, offset, expr):
         if offset in backrefs:
@@ -73,7 +75,7 @@ class MemoryState(object):
             if offset not in refs: del backrefs[offset]
 
     def set(self, offset, expr):
-        if not Expr(offset).simple(): # XXX ignore for now
+        if not Expr(offset).simple():  # XXX ignore for now
             flushed = self.flush()
             flushed.append(SetMemory(offset, expr))
             return flushed
@@ -86,7 +88,7 @@ class MemoryState(object):
         expr = expr.withmemory(memory)
 
         if offset in expr.references():
-            assert offset not in memory # invariant
+            assert offset not in memory  # invariant
 
             invexpr = expr.inverse(offset)
             if invexpr is not None:
@@ -119,7 +121,7 @@ class MemoryState(object):
         return [], expr
 
     def remove(self, offset):
-        if not Expr(offset).simple(): # XXX ignore for now
+        if not Expr(offset).simple():  # XXX ignore for now
             flushed = self.flush()
             return flushed, offset
 
@@ -128,14 +130,14 @@ class MemoryState(object):
 
     def nodes(self):
         nodes = []
-        for offset, value in self.memory.items():
+        for offset, value in list(self.memory.items()):
             nodes.append(SetMemory(offset, value))
         return nodes
 
     def copy(self):
         state = MemoryState()
         state.memory = self.memory.copy()
-        state.backrefs = dict((k, v.copy()) for k, v in self.backrefs.items())
+        state.backrefs = dict((k, v.copy()) for k, v in list(self.backrefs.items()))
         return state
 
     def clear(self):
@@ -149,5 +151,4 @@ class MemoryState(object):
 
     def __repr__(self):
         return '<MemoryState: %s>' % ', '.join('%r=%s' % (k, v.compactrepr())
-                                               for k, v in self.memory.items())
-
+                                               for k, v in list(self.memory.items()))

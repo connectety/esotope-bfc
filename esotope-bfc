@@ -1,12 +1,15 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # Esotope Brainfuck Compiler
 # Copyright (c) 2009, Kang Seonghoon.
 
 import sys
 import getopt
 
-try: import psyco; psyco.full()
-except ImportError: pass
+try:
+    import psyco
+    psyco.full()
+except ImportError:
+    pass
 
 from bfc.compiler import Compiler
 from bfc.parser import brainfuck as parser_bf, bfrle as parser_bfrle
@@ -15,9 +18,9 @@ from bfc.codegen import c as codegen_c
 PARSERS = {'brainfuck': parser_bf, 'bfrle': parser_bfrle}
 CODEGENS = {'c': codegen_c}
 
-
+
 def usage(progname):
-    print >>sys.stderr, '''\
+    print('''\
 Esotope Brainfuck compiler
 Copyright (c) 2009, Kang Seonghoon.
 
@@ -42,16 +45,17 @@ Options:
     Enables debugging output (as C comment) in the code.
 
 For more information please visit http://esotope-bfc.googlecode.com/.
-''' % (progname, progname)
+''' % (progname, progname), file=sys.stderr)
+
 
 def main(argv):
     try:
         opts, args = getopt.getopt(argv[1:], 'hi:f:s:v',
-                ['help', 'input-format=', 'output-format=', 'cellsize=',
-                 'verbose', 'debug'])
-    except getopt.GetoptError, err:
-        print >>sys.stderr, 'Error: %s' % err
-        print >>sys.stderr, 'Type "%s --help" for usage.' % argv[0]
+                                   ['help', 'input-format=', 'output-format=', 'cellsize=',
+                                    'verbose', 'debug'])
+    except getopt.GetoptError as err:
+        print('Error: %s' % err, file=sys.stderr)
+        print('Type "%s --help" for usage.' % argv[0], file=sys.stderr)
         return 1
 
     cellsize = 8
@@ -65,19 +69,19 @@ def main(argv):
         elif opt in ('-i', '--input-format'):
             informat = arg.lower().strip()
             if informat not in PARSERS:
-                print >>sys.stderr, 'Error: Invalid input format %r.' % arg
+                print('Error: Invalid input format %r.' % arg, file=sys.stderr)
                 return 1
         elif opt in ('-f', '--output-format'):
             outformat = arg.lower().strip()
             if outformat not in CODEGENS:
-                print >>sys.stderr, 'Error: Invalid output format %r.' % arg
+                print('Error: Invalid output format %r.' % arg, file=sys.stderr)
                 return 1
         elif opt in ('-s', '--cellsize'):
             try:
                 cellsize = int(arg)
                 if cellsize not in (8, 16, 32): raise ValueError
             except:
-                print >>sys.stderr, 'Error: Invalid cell size %r.' % arg
+                print('Error: Invalid cell size %r.' % arg, file=sys.stderr)
                 return 1
         elif opt in ('-v', '--verbose'):
             verbose = True
@@ -87,14 +91,14 @@ def main(argv):
             assert False
 
     if not args:
-        print >>sys.stderr, 'Type "%s --help" for usage.' % argv[0]
+        print('Type "%s --help" for usage.' % argv[0], file=sys.stderr)
         return 1
 
     # determine informat via the file extension.
     if informat is None:
         if args[0].endswith('.bfrle'):
             informat = 'bfrle'
-        else: #elif args[0].endswith('.b') or args[0].endswith('.bf'):
+        else:  # elif args[0].endswith('.b') or args[0].endswith('.bf'):
             informat = 'brainfuck'
 
     if args[0] == '-':
@@ -108,6 +112,6 @@ def main(argv):
     compiler.compile(fp)
     return 0
 
+
 if __name__ == '__main__':
     sys.exit(main(sys.argv))
-

@@ -6,6 +6,7 @@ from bfc.cond import *
 
 from bfc.opt.base import BaseOptimizerPass, Transformer
 
+
 class OptimizerPass(BaseOptimizerPass):
     # adds redundant SetMemory nodes for later passes. other passes don't know
     # about initial memory contents, so it has to add such information explicitly.
@@ -15,7 +16,7 @@ class OptimizerPass(BaseOptimizerPass):
             return node
 
         offsets = 0
-        changed = set([None]) # for getting rid of None
+        changed = {None}  # for getting rid of None
         tr = Transformer(node)
         for i, cur in tr:
             refs = cur.prereferences().movepointer(offsets)
@@ -32,4 +33,3 @@ class OptimizerPass(BaseOptimizerPass):
             offsets += ioffsets
 
         return node
-

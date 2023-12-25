@@ -6,6 +6,7 @@ from bfc.cond import *
 
 from bfc.parser.base import BaseParser
 
+
 class Parser(BaseParser):
     """The run-length encoded Brainfuck parser. (As emitted by gcc-bf)
 
@@ -27,11 +28,11 @@ class Parser(BaseParser):
 
                 if ch in '+-><':
                     # detect +*xx form.
-                    if i + 1 < lline and line[i] == '*' and '1' <= line[i+1] <= '9':
+                    if i + 1 < lline and line[i] == '*' and '1' <= line[i + 1] <= '9':
                         nexti = i + 2
                         while nexti < lline and '0' <= line[nexti] <= '9':
                             nexti += 1
-                        repcount = int(line[i+1:nexti])
+                        repcount = int(line[i + 1:nexti])
                         i = nexti
                     else:
                         repcount = 1
@@ -42,7 +43,7 @@ class Parser(BaseParser):
                         nodestack[-1].append(AdjustMemory(0, -repcount))
                     elif ch == '>':
                         nodestack[-1].append(MovePointer(+repcount))
-                    else: # ch == '<'
+                    else:  # ch == '<'
                         nodestack[-1].append(MovePointer(-repcount))
 
                 elif ch == '.':
@@ -53,7 +54,7 @@ class Parser(BaseParser):
                     nodestack.append(While(MemNotEqual(0, 0)))
                 elif ch == ']':
                     if len(nodestack) < 2:
-                        raise ValueError('Not matching ] at line %d' % (lineno+1))
+                        raise ValueError('Not matching ] at line %d' % (lineno + 1))
                     loop = nodestack.pop()
                     nodestack[-1].append(loop)
                 else:
@@ -65,4 +66,3 @@ class Parser(BaseParser):
 
     def unknown(self, ch, nodestack):
         pass
-

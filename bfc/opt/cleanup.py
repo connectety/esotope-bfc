@@ -6,6 +6,7 @@ from bfc.cond import *
 
 from bfc.opt.base import Transformer
 
+
 def cleanup(node):
     # general node cleanup routine. it does the following jobs:
     # - removes every no-op nodes, including If[False; ...] and k+=0.
@@ -21,7 +22,7 @@ def cleanup(node):
     offsets = 0
     tr = Transformer(node)
     for i, cur in tr:
-        if not cur: # remove no-op
+        if not cur:  # remove no-op
             tr.replace()
             continue
 
@@ -70,4 +71,3 @@ def cleanup(node):
         node.append(MovePointer(offsets))
 
     return node
-

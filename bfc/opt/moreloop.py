@@ -7,6 +7,8 @@ from bfc.memstate import *
 
 from bfc.opt.base import BaseOptimizerPass, Transformer
 from bfc.opt.cleanup import cleanup
+from functools import reduce
+
 
 class OptimizerPass(BaseOptimizerPass):
     # specialized loop optimization, including:
@@ -17,7 +19,7 @@ class OptimizerPass(BaseOptimizerPass):
         ifpos = None
         for i, inode in enumerate(node):
             if isinstance(inode, If):
-                if ifpos is not None: return None # multiple loops
+                if ifpos is not None: return None  # multiple loops
                 ifpos = i
             elif not isinstance(inode, SetMemory):
                 return None
@@ -29,12 +31,12 @@ class OptimizerPass(BaseOptimizerPass):
         for cur in nodes:
             if not cur: continue
             assert isinstance(cur, SetMemory)
-            if cur.value.references().difference([cur.offset]): # flush mappings
-                result.extend(SetMemory(k,v) for k,v in subst.items() if v != Expr[k])
+            if cur.value.references().difference([cur.offset]):  # flush mappings
+                result.extend(SetMemory(k, v) for k, v in list(subst.items()) if v != Expr[k])
                 result.append(cur)
             else:
                 subst[cur.offset] = cur.value.withmemory(subst)
-        result.extend(SetMemory(k,v) for k,v in subst.items() if v != Expr[k])
+        result.extend(SetMemory(k, v) for k, v in list(subst.items()) if v != Expr[k])
         return result
 
     def _transform(self, node):
@@ -47,17 +49,17 @@ class OptimizerPass(BaseOptimizerPass):
         invmap = {}
         for inode in node[:ifpos]:
             refs = inode.value.references()
-            if refs and refs != set([inode.offset]): return node
+            if refs and refs != {inode.offset}: return node
             statemap[int(inode.offset)] = inode.value.withmemory(statemap)
-        for k, v in statemap.items():
+        for k, v in list(statemap.items()):
             invv = v.inverse(k)
-            if invv is None: return node # should be invertible
+            if invv is None: return node  # should be invertible
             invmap[k] = invv
         prealters = set(statemap.keys())
 
-        if any(i.postreferences() for i in node[ifpos+1:]): return None
+        if any(i.postreferences() for i in node[ifpos + 1:]): return None
         bodyupdates = reduce(set.union, [i.postupdates().unsure for i in ifnode], set())
-        postupdates = reduce(set.union, [i.postupdates().unsure for i in node[ifpos+1:]], set())
+        postupdates = reduce(set.union, [i.postupdates().unsure for i in node[ifpos + 1:]], set())
         if not (prealters & bodyupdates) <= postupdates: return node
 
         if len(ifnode) > 1 and isinstance(ifnode[0], If) and \
@@ -83,13 +85,13 @@ class OptimizerPass(BaseOptimizerPass):
                 for offset in inode.postupdates().unsure:
                     if offset in statemap: del statemap[offset]
                     lastdefs[offset] = i
-            for k, v in lastdefs.items(): # clears out the duplicated references in body
+            for k, v in list(lastdefs.items()):  # clears out the duplicated references in body
                 if k in ipostupdates or k in postupdates: iifbody[v] = Nop()
 
             ifbody = [If(iifcond, self.__propagate_mini(iifbody))]
             lastdefs = {}
             for i, inode in enumerate(ifnode):
-                if i == 0: continue # If node
+                if i == 0: continue  # If node
                 offset = Expr(inode.offset)
                 value = inode.value
                 ifbody.append(SetMemory(offset, value.withmemory(statemap)))
@@ -98,11 +100,11 @@ class OptimizerPass(BaseOptimizerPass):
                 for offset in inode.postupdates().unsure:
                     if offset in statemap: del statemap[offset]
                     lastdefs[offset] = i
-            for k, v in lastdefs.items(): # clears out the duplicated references in body
+            for k, v in list(lastdefs.items()):  # clears out the duplicated references in body
                 if k in postupdates: ifbody[v] = Nop()
 
             ifnode = If(ifcond, ifbody[:1] + self.__propagate_mini(ifbody[1:]))
-            node[:] = [ifnode] + self.__propagate_mini(node[:ifpos] + node[ifpos+1:])
+            node[:] = [ifnode] + self.__propagate_mini(node[:ifpos] + node[ifpos + 1:])
             ifpos = 0
 
         if len(ifnode) == 1 and isinstance(ifnode[0], If):
@@ -125,14 +127,13 @@ class OptimizerPass(BaseOptimizerPass):
                 for offset in inode.postupdates().unsure:
                     if offset in statemap: del statemap[offset]
                     lastdefs[offset] = i
-            for k, v in lastdefs.items(): # clears out the duplicated references in body
+            for k, v in list(lastdefs.items()):  # clears out the duplicated references in body
                 if k in postupdates: ifbody[v] = Nop()
 
             node[:] = ([If(ifcond, self.__propagate_mini(ifbody))] +
-                       self.__propagate_mini(node[:ifpos] + node[ifpos+1:]))
+                       self.__propagate_mini(node[:ifpos] + node[ifpos + 1:]))
 
         return node
 
     def transform(self, node):
         return self.visit(node, self._transform)
-
